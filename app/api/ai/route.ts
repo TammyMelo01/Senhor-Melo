@@ -1,20 +1,14 @@
 import { NextResponse } from "next/server";
 import { askGroq } from "@/lib/groq";
 
-function getTextFromResult(result: unknown): string {
-  if (!result || typeof result !== "object") {
-    return "";
-  }
+function extractSummary(result: unknown): string {
+  if (!result || typeof result !== "object") return "";
 
   const data = result as Record<string, unknown>;
 
-  const summary = data.summary;
-  const answer = data.answer;
-  const message = data.message;
-
-  if (typeof summary === "string") return summary;
-  if (typeof answer === "string") return answer;
-  if (typeof message === "string") return message;
+  if (typeof data.summary === "string") return data.summary;
+  if (typeof data.answer === "string") return data.answer;
+  if (typeof data.message === "string") return data.message;
 
   return "";
 }
@@ -31,7 +25,7 @@ export async function POST(request: Request) {
     }
 
     const result = await askGroq(input);
-    const summary = getTextFromResult(result);
+    const summary = extractSummary(result);
 
     return NextResponse.json({
       summary:
