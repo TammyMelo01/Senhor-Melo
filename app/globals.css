@@ -157,3 +157,99 @@
     width: 100%;
   }
 }
+
+
+.home-finance-only { margin-top: 22px; }
+
+.metric-card { text-align: left; }
+button.metric-card { width: 100%; color: inherit; }
+button.metric-card:active { transform: scale(0.99); }
+
+.search-results-label { color: var(--muted); font-weight: 800; margin: -6px 0 14px; }
+
+.pie-panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  padding: 20px;
+  margin: 18px 0;
+  display: grid;
+  grid-template-columns: 1fr 160px 1fr;
+  gap: 18px;
+  align-items: center;
+}
+.pie-panel h2 { margin: 0; }
+.pie-panel p { color: var(--muted); margin: 6px 0 0; }
+.pie-chart { width: 150px; height: 150px; border-radius: 50%; position: relative; box-shadow: var(--shadow); }
+.pie-chart::after { content: ""; position: absolute; inset: 34px; border-radius: 50%; background: var(--card); }
+.pie-legend { display: grid; gap: 8px; }
+.pie-legend span { display: flex; align-items: center; gap: 8px; color: var(--muted); font-weight: 800; }
+.pie-legend i { width: 12px; height: 12px; border-radius: 50%; }
+
+.transaction-swipe {
+  display: grid;
+  grid-template-columns: 78px 1fr 78px;
+  gap: 8px;
+  align-items: stretch;
+}
+.transaction-row { width: 100%; text-align: left; background: var(--card); color: var(--text); }
+.swipe-action {
+  border-radius: 18px;
+  color: white;
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 900;
+}
+.swipe-action.edit { background: var(--blue); }
+.swipe-action.delete, .danger-action { background: var(--red); }
+.danger-action { color: white; border-radius: 14px; padding: 0 18px; min-height: 44px; font-weight: 900; }
+.empty-list { color: var(--muted); font-weight: 800; }
+
+.details-card { display: grid; gap: 10px; }
+.details-card h3 { margin: 0 0 8px; }
+.details-card p { margin: 0; color: var(--muted); }
+.modal-actions { display: flex; gap: 10px; margin-top: 10px; }
+
+.summary-total { border-radius: 24px; padding: 18px; color: white; display: grid; gap: 6px; margin-bottom: 16px; }
+.summary-total.green { background: var(--green); }
+.summary-total.red { background: var(--red); }
+.summary-total strong { font-size: 28px; }
+
+.summary-list { display: grid; gap: 12px; }
+.summary-list article { display: flex; gap: 12px; border: 1px solid var(--line); border-radius: 18px; padding: 14px; }
+.summary-list strong, .summary-list span { display: block; }
+.summary-list span { color: var(--muted); margin-top: 4px; }
+
+@media (max-width: 680px) {
+  .home-finance-only { margin-top: 18px; }
+  .content-grid { display: block !important; }
+  .content-grid .calendar-module { display: none !important; }
+
+  .pie-panel { grid-template-columns: 1fr; text-align: left; }
+  .pie-chart { margin: 0 auto; }
+
+  .transaction-list { gap: 14px; }
+  .transaction-swipe {
+    grid-template-columns: 1fr;
+    position: relative;
+    background: transparent;
+  }
+  .swipe-action {
+    min-height: 44px;
+    grid-template-columns: auto auto;
+    justify-content: center;
+  }
+  .transaction-row { order: -1; }
+  .transaction-right { min-width: 110px; }
+
+  .modal-actions { display: grid; }
+  .modal-actions button { width: 100%; }
+
+  .finance-card {
+    min-height: 140px;
+    text-align: left;
+  }
+}
+
