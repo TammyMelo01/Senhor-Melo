@@ -5,7 +5,7 @@ import { Bot, Sparkles } from "lucide-react";
 
 export function AssistantBox() {
   const [input, setInput] = useState("Minha esposa tem plantão hoje à noite e próximo domingo. Add na agenda.");
-  const [answer, setAnswer] = useState("Sem resposta.");
+  const [answer, setAnswer] = useState("Digite algo e clique para organizar.");
   const [loading, setLoading] = useState(false);
 
   async function ask() {
@@ -30,9 +30,7 @@ export function AssistantBox() {
 
   return (
     <section className="assistant-box">
-      <div className="assistant-icon">
-        <Bot />
-      </div>
+      <div className="assistant-icon"><Bot /></div>
       <h2>Assistente Senhor Melo</h2>
       <textarea value={input} onChange={(event) => setInput(event.target.value)} />
       <button className="primary-action" onClick={ask} disabled={loading}>
