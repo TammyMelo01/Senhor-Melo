@@ -16,7 +16,7 @@ export function DashboardCard({
   onClick?: () => void;
 }) {
   return (
-    <button className="metric-card" onClick={onClick}>
+    <button type="button" className="metric-card" onClick={onClick}>
       <div className={`metric-icon ${tone}`}>{icon}</div>
       <div>
         <span>{title}</span>
