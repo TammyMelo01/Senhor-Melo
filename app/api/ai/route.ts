@@ -28,17 +28,12 @@ export async function POST(request: Request) {
     const summary = extractSummary(result);
 
     return NextResponse.json({
-      summary:
-        summary ||
-        "Sugestão criada: revise a agenda, confirme responsáveis e ative lembretes por WhatsApp.",
+      summary: summary || "Sugestão criada: revise a agenda, confirme responsáveis e ative lembretes por WhatsApp.",
       raw: result,
     });
   } catch {
     return NextResponse.json(
-      {
-        summary:
-          "Não consegui processar a solicitação agora. Verifique a configuração da IA.",
-      },
+      { summary: "Não consegui processar a solicitação agora. Verifique a configuração da IA." },
       { status: 500 }
     );
   }
