@@ -1,0 +1,4 @@
+"use client";
+import { useState } from "react";
+import { Bot, Sparkles } from "lucide-react";
+export function AssistantBox(){const [input,setInput]=useState("Minha esposa trabalha terça e quinta, meu filho tem futebol quarta e a internet vence dia 10.");const [answer,setAnswer]=useState("Clique para a IA organizar eventos, tarefas, contas e lembretes.");async function ask(){setAnswer("Organizando com IA...");const response=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({input})});const data=await response.json();setAnswer(data.summary||"Plano criado em modo demonstração.")}return <section className="assistant-box"><div className="assistant-icon"><Bot/></div><h2>Assistente Senhor Melo</h2><textarea value={input} onChange={e=>setInput(e.target.value)}/><button className="primary-action" onClick={ask}><Sparkles size={18}/> Organizar com IA</button><div className="ai-answer">{answer}</div></section>}
