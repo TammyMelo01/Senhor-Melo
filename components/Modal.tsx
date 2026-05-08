@@ -13,12 +13,10 @@ export function Modal({ title, open, onClose, children }: ModalProps) {
       <div className="modal-card">
         <div className="modal-head">
           <h2>{title}</h2>
-
-          <button type="button" onClick={onClose} aria-label="Fechar modal">
+          <button type="button" onClick={onClose} aria-label="Fechar">
             ×
           </button>
         </div>
-
         {children}
       </div>
     </div>
