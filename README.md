@@ -1,36 +1,29 @@
-# Correções Senhor Melo v3.1
+# Correção Senhor Melo v3.5 - Persistência
 
-Arquivos incluídos:
+Esta correção NÃO altera CSS.
 
-1. components/FamilyCalendar.tsx
-   - Substituir o arquivo atual.
-   - Corrige calendário no mobile.
-   - Adiciona criação funcional de eventos/tarefas.
-   - Usa usuário cadastrado para disparar WhatsApp.
+Substitua/crie estes arquivos:
+- lib/supabaseClient.ts
+- lib/persistentStore.ts
+- app/page.tsx
+- app/agenda/page.tsx
+- app/financeiro/page.tsx
+- supabase-persistence.sql
 
-2. app/membros/page.tsx
-   - Substituir o arquivo atual.
-   - Cadastro de usuário funcional com localStorage.
-   - Salva nome, e-mail, telefone, papel e preferências.
-   - Envia mensagem de teste pelo bot ao cadastrar.
+## Supabase
 
-3. app/api/whatsapp/route.ts
-   - Substituir o arquivo atual.
-   - Endpoint para envio de WhatsApp.
+1. Abra Supabase
+2. Vá em SQL Editor
+3. Cole o conteúdo de `supabase-persistence.sql`
+4. Clique Run
 
-4. lib/whatsapp.ts
-   - Substituir o arquivo atual.
-   - Integra com Evolution API.
+## Vercel
 
-5. app/globals.css
-   - NÃO substitua o arquivo inteiro.
-   - Copie o conteúdo e cole no FINAL do seu app/globals.css.
+Confira as variáveis:
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-Depois:
-- Commit changes no GitHub.
-- Redeploy na Vercel.
-- Confirme variáveis:
-  WHATSAPP_API_URL
-  WHATSAPP_API_TOKEN
-  WHATSAPP_INSTANCE=senhor-melo
-#Atualização de variáveis
+Depois faça novo deploy.
+
+Se o Supabase não estiver configurado, o app salva em localStorage.
+Com Supabase configurado, salva no banco online.
