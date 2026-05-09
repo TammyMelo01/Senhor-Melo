@@ -1,7 +1,7 @@
 import { CalendarItem, Member, Transaction } from "@/lib/types";
 import { supabase } from "@/lib/supabaseClient";
 
-const FAMILY_ID = "senhor-melo-default-family";
+const FAMILY_ID = "00000000-0000-0000-0000-000000000001";
 
 function readLocal<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
