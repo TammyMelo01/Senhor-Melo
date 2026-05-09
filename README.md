@@ -33,3 +33,4 @@ Depois:
   WHATSAPP_API_URL
   WHATSAPP_API_TOKEN
   WHATSAPP_INSTANCE=senhor-melo
+#Atualização de variáveis
