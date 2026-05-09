@@ -1,19 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FinanceModule } from "@/components/FinanceModule";
 import { Transaction } from "@/lib/types";
 import { initialCards, initialMembers, initialTransactions } from "@/lib/mockData";
+import { deleteTransactionPersisted, loadTransactions, saveTransaction } from "@/lib/persistentStore";
 
 export default function FinanceiroPage() {
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
 
-  function updateTransaction(updated: Transaction) {
-    setTransactions((current) => current.map((transaction) => (transaction.id === updated.id ? updated : transaction)));
+  useEffect(() => {
+    loadTransactions(initialTransactions).then(setTransactions);
+  }, []);
+
+  async function addTransaction(item: Transaction) {
+    setTransactions((current) => [item, ...current]);
+    await saveTransaction(item);
   }
 
-  function deleteTransaction(id: string) {
+  async function updateTransaction(updated: Transaction) {
+    setTransactions((current) =>
+      current.map((transaction) => (transaction.id === updated.id ? updated : transaction))
+    );
+    await saveTransaction(updated);
+  }
+
+  async function deleteTransaction(id: string) {
     setTransactions((current) => current.filter((transaction) => transaction.id !== id));
+    await deleteTransactionPersisted(id);
   }
 
   return (
@@ -21,16 +35,14 @@ export default function FinanceiroPage() {
       <section className="hero-section">
         <span className="badge">Controle financeiro familiar</span>
         <h1>Finanças simples e inteligentes.</h1>
-        <p className="lead">
-          Receitas, despesas, cartões, contas, vencimentos e lembretes via WhatsApp em uma experiência premium.
-        </p>
+        <p className="lead">Receitas, despesas, cartões, contas, vencimentos e lembretes via WhatsApp em uma experiência premium.</p>
       </section>
 
       <FinanceModule
         members={initialMembers}
         transactions={transactions}
         cards={initialCards}
-        onAddTransaction={(item) => setTransactions([item, ...transactions])}
+        onAddTransaction={addTransaction}
         onUpdateTransaction={updateTransaction}
         onDeleteTransaction={deleteTransaction}
       />
