@@ -140,6 +140,15 @@ export async function saveEvent(item: CalendarItem) {
   return item;
 }
 
+export async function deleteEventPersisted(id: string) {
+  const key = scopedKey("senhor-melo-events");
+  const current = readLocal<CalendarItem[]>(key, []);
+  writeLocal(key, current.filter((item) => item.id !== id));
+
+  if (!supabase) return;
+  await supabase.from("calendar_items").delete().eq("id", id);
+}
+
 function transactionFromDb(row: any): Transaction {
   return {
     id: row.id,
@@ -205,3 +214,4 @@ export async function deleteTransactionPersisted(id: string) {
   if (!supabase) return;
   await supabase.from("transactions").delete().eq("id", id);
 }
+
