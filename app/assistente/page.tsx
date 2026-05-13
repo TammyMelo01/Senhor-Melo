@@ -9,6 +9,113 @@ type Message = {
   content: string;
 };
 
+function MarkdownText({ content }: { content: string }) {
+  const normalized = content
+    .replaceAll("\\n", "\n")
+    .replaceAll("\\t", "\t");
+
+  const lines = normalized.split("\n");
+  const elements: React.ReactNode[] = [];
+  let listItems: string[] = [];
+
+  function flushList() {
+    if (listItems.length > 0) {
+      elements.push(
+        <ul key={`ul-${elements.length}`} style={{ margin: "10px 0 14px 20px", padding: 0 }}>
+          {listItems.map((item, index) => (
+            <li key={index} style={{ marginBottom: 8 }}>
+              <InlineMarkdown text={item} />
+            </li>
+          ))}
+        </ul>
+      );
+      listItems = [];
+    }
+  }
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      flushList();
+      return;
+    }
+
+    if (trimmed.startsWith("- ") || trimmed.startsWith("• ")) {
+      listItems.push(trimmed.replace(/^[-•]\s*/, ""));
+      return;
+    }
+
+    if (/^\d+\.\s/.test(trimmed)) {
+      listItems.push(trimmed.replace(/^\d+\.\s*/, ""));
+      return;
+    }
+
+    flushList();
+
+    if (trimmed.startsWith("### ")) {
+      elements.push(
+        <h3 key={index} style={{ margin: "18px 0 8px", color: "#0f172a", fontSize: 20 }}>
+          <InlineMarkdown text={trimmed.replace("### ", "")} />
+        </h3>
+      );
+      return;
+    }
+
+    if (trimmed.startsWith("## ")) {
+      elements.push(
+        <h2 key={index} style={{ margin: "20px 0 10px", color: "#0f172a", fontSize: 24 }}>
+          <InlineMarkdown text={trimmed.replace("## ", "")} />
+        </h2>
+      );
+      return;
+    }
+
+    if (trimmed.startsWith("# ")) {
+      elements.push(
+        <h1 key={index} style={{ margin: "20px 0 10px", color: "#0f172a", fontSize: 28 }}>
+          <InlineMarkdown text={trimmed.replace("# ", "")} />
+        </h1>
+      );
+      return;
+    }
+
+    elements.push(
+      <p key={index} style={{ margin: "0 0 12px", lineHeight: 1.65 }}>
+        <InlineMarkdown text={trimmed} />
+      </p>
+    );
+  });
+
+  flushList();
+
+  return (
+    <div style={{ color: "#64748b", fontSize: 16, lineHeight: 1.65 }}>
+      {elements}
+    </div>
+  );
+}
+
+function InlineMarkdown({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return (
+            <strong key={index} style={{ color: "#0f172a", fontWeight: 800 }}>
+              {part.slice(2, -2)}
+            </strong>
+          );
+        }
+
+        return <span key={index}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 export default function AssistentePage() {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,6 +132,7 @@ export default function AssistentePage() {
     if (!prompt.trim() || loading) return;
 
     const currentPrompt = prompt;
+    const currentHistory = [...messages];
 
     setMessages((current) => [
       ...current,
@@ -41,6 +149,7 @@ export default function AssistentePage() {
         body: JSON.stringify({
           prompt: currentPrompt,
           familyId: getCurrentFamilyId(),
+          history: currentHistory,
         }),
       });
 
@@ -83,7 +192,7 @@ export default function AssistentePage() {
               <Bot />
               <div>
                 <strong>{message.role === "assistant" ? "Senhor Melo" : "Você"}</strong>
-                <span style={{ whiteSpace: "pre-wrap" }}>{message.content}</span>
+                <MarkdownText content={message.content} />
               </div>
             </article>
           ))}
