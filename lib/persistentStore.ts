@@ -1,7 +1,10 @@
 import { CalendarItem, Member, Transaction } from "@/lib/types";
 import { supabase } from "@/lib/supabaseClient";
+import { getCurrentFamilyId } from "@/lib/familySession";
 
-const FAMILY_ID = "00000000-0000-0000-0000-000000000001";
+function familyId() {
+  return getCurrentFamilyId();
+}
 
 function readLocal<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -20,13 +23,8 @@ function writeLocal<T>(key: string, value: T) {
   } catch {}
 }
 
-export async function ensureDefaultFamily() {
-  if (!supabase) return;
-  await supabase.from("families").upsert({
-    id: FAMILY_ID,
-    name: "Família Melo",
-    updated_at: new Date().toISOString(),
-  });
+function scopedKey(key: string) {
+  return `${key}-${familyId()}`;
 }
 
 function memberFromDb(row: any): Member {
@@ -40,37 +38,36 @@ function memberFromDb(row: any): Member {
 }
 
 export async function loadMembers(fallback: Member[]) {
-  if (!supabase) return readLocal<Member[]>("senhor-melo-members", fallback);
-  await ensureDefaultFamily();
+  const key = scopedKey("senhor-melo-members");
+  if (!supabase) return readLocal<Member[]>(key, fallback);
 
   const { data, error } = await supabase
     .from("family_members")
     .select("*")
-    .eq("family_id", FAMILY_ID)
+    .eq("family_id", familyId())
     .order("created_at", { ascending: false });
 
-  if (error || !data || data.length === 0) {
-    return readLocal<Member[]>("senhor-melo-members", fallback);
-  }
-
+  if (error || !data || data.length === 0) return readLocal<Member[]>(key, fallback);
   return data.map(memberFromDb);
 }
 
 export async function saveMember(member: Member) {
-  const current = readLocal<Member[]>("senhor-melo-members", []);
+  const key = scopedKey("senhor-melo-members");
+  const current = readLocal<Member[]>(key, []);
   const next = [member, ...current.filter((item) => item.id !== member.id)];
-  writeLocal("senhor-melo-members", next);
+  writeLocal(key, next);
 
   if (!supabase) return member;
-  await ensureDefaultFamily();
 
   await supabase.from("family_members").upsert({
     id: member.id,
-    family_id: FAMILY_ID,
+    family_id: familyId(),
     name: member.name,
     role: member.role,
     color: member.color,
     whatsapp: member.whatsapp,
+    status: "active",
+    is_owner: false,
     updated_at: new Date().toISOString(),
   });
 
@@ -98,34 +95,31 @@ function eventFromDb(row: any): CalendarItem {
 }
 
 export async function loadEvents(fallback: CalendarItem[]) {
-  if (!supabase) return readLocal<CalendarItem[]>("senhor-melo-events", fallback);
-  await ensureDefaultFamily();
+  const key = scopedKey("senhor-melo-events");
+  if (!supabase) return readLocal<CalendarItem[]>(key, fallback);
 
   const { data, error } = await supabase
     .from("calendar_items")
     .select("*")
-    .eq("family_id", FAMILY_ID)
+    .eq("family_id", familyId())
     .order("date", { ascending: true })
     .order("start_time", { ascending: true });
 
-  if (error || !data || data.length === 0) {
-    return readLocal<CalendarItem[]>("senhor-melo-events", fallback);
-  }
-
+  if (error || !data || data.length === 0) return readLocal<CalendarItem[]>(key, fallback);
   return data.map(eventFromDb);
 }
 
 export async function saveEvent(item: CalendarItem) {
-  const current = readLocal<CalendarItem[]>("senhor-melo-events", []);
+  const key = scopedKey("senhor-melo-events");
+  const current = readLocal<CalendarItem[]>(key, []);
   const next = [item, ...current.filter((event) => event.id !== item.id)];
-  writeLocal("senhor-melo-events", next);
+  writeLocal(key, next);
 
   if (!supabase) return item;
-  await ensureDefaultFamily();
 
   await supabase.from("calendar_items").upsert({
     id: item.id,
-    family_id: FAMILY_ID,
+    family_id: familyId(),
     title: item.title,
     type: item.type,
     date: item.date,
@@ -163,36 +157,30 @@ function transactionFromDb(row: any): Transaction {
 }
 
 export async function loadTransactions(fallback: Transaction[]) {
-  if (!supabase) return readLocal<Transaction[]>("senhor-melo-transactions", fallback);
-  await ensureDefaultFamily();
+  const key = scopedKey("senhor-melo-transactions");
+  if (!supabase) return readLocal<Transaction[]>(key, fallback);
 
   const { data, error } = await supabase
     .from("transactions")
     .select("*")
-    .eq("family_id", FAMILY_ID)
+    .eq("family_id", familyId())
     .order("created_at", { ascending: false });
 
-  if (error || !data || data.length === 0) {
-    return readLocal<Transaction[]>("senhor-melo-transactions", fallback);
-  }
-
+  if (error || !data || data.length === 0) return readLocal<Transaction[]>(key, fallback);
   return data.map(transactionFromDb);
 }
 
 export async function saveTransaction(transaction: Transaction) {
-  const current = readLocal<Transaction[]>("senhor-melo-transactions", []);
-  const next = [
-    transaction,
-    ...current.filter((item) => item.id !== transaction.id),
-  ];
-  writeLocal("senhor-melo-transactions", next);
+  const key = scopedKey("senhor-melo-transactions");
+  const current = readLocal<Transaction[]>(key, []);
+  const next = [transaction, ...current.filter((item) => item.id !== transaction.id)];
+  writeLocal(key, next);
 
   if (!supabase) return transaction;
-  await ensureDefaultFamily();
 
   await supabase.from("transactions").upsert({
     id: transaction.id,
-    family_id: FAMILY_ID,
+    family_id: familyId(),
     kind: transaction.kind,
     value: transaction.value,
     category: transaction.category,
@@ -210,8 +198,9 @@ export async function saveTransaction(transaction: Transaction) {
 }
 
 export async function deleteTransactionPersisted(id: string) {
-  const current = readLocal<Transaction[]>("senhor-melo-transactions", []);
-  writeLocal("senhor-melo-transactions", current.filter((item) => item.id !== id));
+  const key = scopedKey("senhor-melo-transactions");
+  const current = readLocal<Transaction[]>(key, []);
+  writeLocal(key, current.filter((item) => item.id !== id));
 
   if (!supabase) return;
   await supabase.from("transactions").delete().eq("id", id);
