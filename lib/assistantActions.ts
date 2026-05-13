@@ -24,7 +24,7 @@ function tomorrowISO() {
 }
 
 function extractMoney(text: string) {
-  const match = text.match(/(?:r\\$\\s*)?(\\d{1,7})(?:[,.](\\d{2}))?/i);
+  const match = text.match(/(?:r\$\s*)?(\d{1,7})(?:[,.](\d{2}))?/i);
   if (!match) return 0;
 
   const reais = Number(match[1]);
@@ -34,7 +34,7 @@ function extractMoney(text: string) {
 }
 
 function extractTime(text: string) {
-  const match = text.match(/(?:às|as|para|de)\\s*(\\d{1,2})(?::|h)?(\\d{2})?/i);
+  const match = text.match(/(?:às|as|para|de)\s*(\d{1,2})(?::|h)?(\d{2})?/i);
   if (!match) return "08:00";
 
   const hour = String(Math.min(Number(match[1]), 23)).padStart(2, "0");
@@ -49,7 +49,7 @@ function extractDate(text: string) {
   if (lower.includes("amanhã") || lower.includes("amanha")) return tomorrowISO();
   if (lower.includes("hoje")) return todayISO();
 
-  const dateMatch = lower.match(/(\\d{1,2})[\\/\\-](\\d{1,2})(?:[\\/\\-](\\d{2,4}))?/);
+  const dateMatch = lower.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
 
   if (dateMatch) {
     const day = String(Number(dateMatch[1])).padStart(2, "0");
@@ -69,8 +69,8 @@ function extractDate(text: string) {
 function cleanTitle(text: string) {
   return text
     .replace(/adicionar|adicione|colocar|coloque|criar|crie|cadastrar|cadastre|marcar|marque|na agenda|agenda|compromisso|tarefa/gi, "")
-    .replace(/amanhã|amanha|hoje|às|as|\\d{1,2}h\\d{0,2}|\\d{1,2}:\\d{2}/gi, "")
-    .replace(/\\s+/g, " ")
+    .replace(/amanhã|amanha|hoje|às|as|\d{1,2}h\d{0,2}|\d{1,2}:\d{2}/gi, "")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -79,7 +79,7 @@ function detectShoppingItems(text: string) {
     .replace(/adicionar|adicione|colocar|coloque|incluir|inclua|na lista de compras|lista de compras|compras|supermercado/gi, "")
     .trim();
 
-  clean = clean.replace(/\\.$/, "");
+  clean = clean.replace(/\.$/, "");
 
   return clean
     .split(/,| e /)
@@ -87,20 +87,42 @@ function detectShoppingItems(text: string) {
     .filter(Boolean);
 }
 
+function hasPlanContent(text: string) {
+  return /dia\s*1/i.test(text) && /dia\s*2/i.test(text);
+}
+
 export function detectAssistantAction(prompt: string): AssistantActionResult {
   const text = prompt.toLowerCase();
 
   const wantsCreate =
-    /adicionar|adicione|colocar|coloque|criar|crie|cadastrar|cadastre|registrar|registre|salvar|salve|marcar|marque/i.test(prompt);
+    /adicionar|adicione|colocar|coloque|criar|crie|cadastrar|cadastre|registrar|registre|salvar|salve|marcar|marque|incluir|inclua/i.test(prompt);
 
   const wantsPlan =
-    text.includes("plano") &&
-    (text.includes("organizar a casa") || text.includes("arrumar a casa") || text.includes("férias") || text.includes("ferias"));
+    (text.includes("plano") || hasPlanContent(prompt)) &&
+    (
+      text.includes("organizar a casa") ||
+      text.includes("arrumar a casa") ||
+      text.includes("férias") ||
+      text.includes("ferias") ||
+      hasPlanContent(prompt)
+    );
 
-  if (wantsPlan) {
-    const match = text.match(/(\\d+)\\s*dias?/);
+  const wantsPutThisPlanInAgenda =
+    (text.includes("esse plano") || text.includes("este plano") || hasPlanContent(prompt)) &&
+    (text.includes("agenda") || text.includes("coloque") || text.includes("colocar") || text.includes("adicione") || text.includes("adicionar"));
+
+  if (wantsPlan || wantsPutThisPlanInAgenda) {
+    const match = text.match(/(\d+)\s*dias?/);
     const days = match ? Math.min(Number(match[1]), 30) : 15;
-    const shouldCreate = text.includes("agenda") || text.includes("coloque") || text.includes("colocar") || text.includes("crie") || text.includes("criar");
+    const shouldCreate =
+      wantsPutThisPlanInAgenda ||
+      text.includes("agenda") ||
+      text.includes("coloque") ||
+      text.includes("colocar") ||
+      text.includes("crie") ||
+      text.includes("criar") ||
+      text.includes("adicione") ||
+      text.includes("adicionar");
 
     return {
       type: "house_plan",
@@ -209,3 +231,4 @@ export function detectAssistantAction(prompt: string): AssistantActionResult {
     reply: "",
   };
 }
+
