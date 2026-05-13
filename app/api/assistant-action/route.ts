@@ -1,45 +1,10 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabaseClient";
-import { buildHouseOrganizationPlan, formatPlan, localAssistantAnswer, senhorMeloKnowledge } from "@/lib/assistantKnowledge";
+import {
+  buildHouseOrganizationPlan,
+  formatPlan,
+  localAssistantAnswer,
+} from "@/lib/assistantKnowledge";
 import { detectAssistantAction } from "@/lib/assistantActions";
-
-type GroqMessage = {
-  role: "system" | "user" | "assistant";
-  content: string;
-};
-
-async function askGroq(prompt: string) {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) return null;
-
-  const messages: GroqMessage[] = [
-    { role: "system", content: senhorMeloKnowledge },
-    { role: "user", content: prompt },
-  ];
-
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "llama-3.1-8b-instant",
-      messages,
-      temperature: 0.5,
-      max_tokens: 900,
-    }),
-  });
-
-  if (!response.ok) return null;
-
-  const data = await response.json();
-  return data?.choices?.[0]?.message?.content || null;
-}
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function addDaysISO(days: number) {
   const date = new Date();
@@ -47,11 +12,54 @@ function addDaysISO(days: number) {
   return date.toISOString().slice(0, 10);
 }
 
+async function getSupabase() {
+  try {
+    const mod = await import("@/lib/supabaseClient");
+    return mod.supabase || null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeLineBreaks(text: string) {
+  return text.replaceAll("\\n", "\n").replaceAll("\\t", "\t");
+}
+
+function findLastAssistantPlan(history: any[]) {
+  const lastAssistantMessage = [...history]
+    .reverse()
+    .find((item: any) => item.role === "assistant" && /dia\s*1/i.test(String(item.content || "")));
+
+  return lastAssistantMessage?.content ? normalizeLineBreaks(lastAssistantMessage.content) : "";
+}
+
+function buildContextualPrompt(prompt: string, history: any[]) {
+  const lower = prompt.toLowerCase();
+
+  const refersToPlan =
+    lower.includes("esse plano") ||
+    lower.includes("este plano") ||
+    lower.includes("coloca esse plano") ||
+    lower.includes("coloque esse plano") ||
+    lower.includes("adiciona esse plano") ||
+    lower.includes("adicione esse plano") ||
+    lower.includes("minha agenda");
+
+  if (!refersToPlan) return prompt;
+
+  const lastPlan = findLastAssistantPlan(history);
+
+  if (!lastPlan) return prompt;
+
+  return `${lastPlan}\n\nPedido do usuário: ${prompt}`;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const prompt = String(body.prompt || "").trim();
     const familyId = body.familyId || "00000000-0000-0000-0000-000000000001";
+    const history = Array.isArray(body.history) ? body.history : [];
 
     if (!prompt) {
       return NextResponse.json({
@@ -61,7 +69,9 @@ export async function POST(request: Request) {
       });
     }
 
-    const action = detectAssistantAction(prompt);
+    const contextualPrompt = buildContextualPrompt(prompt, history);
+    const action = detectAssistantAction(contextualPrompt);
+    const supabase = await getSupabase();
 
     if (action.type === "house_plan") {
       const days = Number(action.data?.days || 15);
@@ -89,21 +99,21 @@ export async function POST(request: Request) {
         return NextResponse.json({
           type: "house_plan",
           created: true,
-          answer: `Pronto. Criei um plano de ${days} dias e adicionei tudo na agenda:\\n\\n${formatPlan(plan)}`,
+          answer: `## Plano adicionado à agenda\n\nPronto. Criei um plano de **${days} dias** e adicionei tudo na sua agenda.\n\n${formatPlan(plan)}`,
         });
       }
 
       return NextResponse.json({
         type: "house_plan",
         created: false,
-        answer: `Claro. Montei um plano de ${days} dias para organizar a casa:\\n\\n${formatPlan(plan)}\\n\\nSe quiser, me diga: "coloque esse plano na agenda".`,
+        answer: `## Plano de ${days} dias para organizar a casa\n\n${formatPlan(plan)}\n\n**Quer que eu coloque esse plano na agenda?**\n\nSe quiser, responda: **coloque esse plano na minha agenda**.`,
       });
     }
 
     if (action.type === "shopping_item" && action.shouldCreate) {
       const items: string[] = action.data?.items || [];
 
-      if (items.length === 0) {
+      if (!items.length) {
         return NextResponse.json({
           type: "shopping_item",
           created: false,
@@ -127,56 +137,10 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         type: "shopping_item",
-        created: true,
-        answer: `Pronto. Adicionei na lista de compras: ${items.join(", ")}.`,
-      });
-    }
-
-    if (action.type === "transaction" && action.shouldCreate) {
-      if (!action.data?.value) {
-        return NextResponse.json({
-          type: "transaction",
-          created: false,
-          answer: "Consigo registrar, mas preciso que você informe o valor. Exemplo: adicionar despesa de R$ 120 no mercado.",
-        });
-      }
-
-      if (supabase) {
-        await supabase.from("transactions").insert({
-          id: crypto.randomUUID(),
-          family_id: familyId,
-          kind: action.data.kind,
-          value: action.data.value,
-          category: action.data.category,
-          account: action.data.account,
-          member_name: "Família",
-          description: action.data.description,
-          due_date: action.data.dueDate || todayISO(),
-          whatsapp_reminder: Boolean(action.data.whatsappReminder),
-          paid: action.data.kind === "Receita",
-        });
-      }
-
-      return NextResponse.json({
-        type: "transaction",
-        created: true,
-        answer: `${action.data.kind} registrada: ${Number(action.data.value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} em ${action.data.category}.`,
-      });
-    }
-
-    if (action.type === "vaccine_record" && action.shouldCreate) {
-      if (supabase) {
-        await supabase.from("vaccine_records").insert({
-          id: crypto.randomUUID(),
-          family_id: familyId,
-          ...action.data,
-        });
-      }
-
-      return NextResponse.json({
-        type: "vaccine_record",
-        created: true,
-        answer: "Pronto. Cadastrei essa vacina no cartão de vacinas. Confirme sempre as datas com o posto de saúde ou pediatra.",
+        created: Boolean(supabase),
+        answer: supabase
+          ? `## Lista de compras atualizada\n\nAdicionei:\n\n${items.map((item) => `- ${item}`).join("\n")}`
+          : `Entendi. Itens para adicionar:\n\n${items.map((item) => `- ${item}`).join("\n")}\n\nO banco não respondeu agora.`,
       });
     }
 
@@ -204,29 +168,78 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         type: "calendar_event",
-        created: true,
-        answer: `Pronto. Adicionei "${action.data.title}" na agenda para ${action.data.date}.`,
+        created: Boolean(supabase),
+        answer: supabase
+          ? `## Compromisso adicionado\n\nAdicionei **${action.data.title}** na agenda para **${action.data.date}**.`
+          : `Entendi. Eu montaria o compromisso **${action.data.title}** para **${action.data.date}**, mas o banco não respondeu agora.`,
       });
     }
 
-    const groqAnswer = await askGroq(prompt);
-    const answer = groqAnswer || localAssistantAnswer(prompt);
+    if (action.type === "transaction" && action.shouldCreate) {
+      if (!action.data?.value) {
+        return NextResponse.json({
+          type: "transaction",
+          created: false,
+          answer:
+            "Consigo registrar, mas preciso que você informe o valor. Exemplo: **adicionar despesa de R$ 120 no mercado**.",
+        });
+      }
+
+      if (supabase) {
+        await supabase.from("transactions").insert({
+          id: crypto.randomUUID(),
+          family_id: familyId,
+          kind: action.data.kind,
+          value: action.data.value,
+          category: action.data.category,
+          account: action.data.account,
+          member_name: "Família",
+          description: action.data.description,
+          due_date: action.data.dueDate,
+          whatsapp_reminder: Boolean(action.data.whatsappReminder),
+          paid: action.data.kind === "Receita",
+        });
+      }
+
+      return NextResponse.json({
+        type: "transaction",
+        created: Boolean(supabase),
+        answer: `## ${action.data.kind} registrada\n\nValor: **${Number(action.data.value).toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        })}**\n\nCategoria: **${action.data.category}**.`,
+      });
+    }
+
+    if (action.type === "vaccine_record" && action.shouldCreate) {
+      if (supabase) {
+        await supabase.from("vaccine_records").insert({
+          id: crypto.randomUUID(),
+          family_id: familyId,
+          ...action.data,
+        });
+      }
+
+      return NextResponse.json({
+        type: "vaccine_record",
+        created: Boolean(supabase),
+        answer:
+          "## Vacina cadastrada\n\nCadastrei essa vacina no cartão de vacinas.\n\n**Importante:** confirme sempre as datas com o posto de saúde ou pediatra.",
+      });
+    }
 
     return NextResponse.json({
       type: "answer",
       created: false,
-      answer,
-      warnings: groqAnswer ? [] : ["Resposta gerada pelo modo local do Senhor Melo."],
+      answer: localAssistantAnswer(prompt),
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        type: "error",
-        created: false,
-        answer: "Não consegui processar agora. Tente novamente em instantes.",
-        error: String(error),
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      type: "answer",
+      created: false,
+      answer:
+        "Consigo te ajudar, mas tive uma falha técnica agora. Tente novamente em instantes.",
+      error: String(error),
+    });
   }
 }
