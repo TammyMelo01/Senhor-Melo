@@ -23,12 +23,14 @@ export default function AssistentePage() {
   async function sendMessage() {
     if (!prompt.trim() || loading) return;
 
-    const userMessage: Message = {
-      role: "user",
-      content: prompt,
-    };
+    const currentPrompt = prompt;
 
-    setMessages((current) => [...current, userMessage]);
+    setMessages((current) => [
+      ...current,
+      { role: "user", content: currentPrompt },
+    ]);
+
+    setPrompt("");
     setLoading(true);
 
     try {
@@ -37,23 +39,22 @@ export default function AssistentePage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          prompt,
-        }),
+        body: JSON.stringify({ prompt: currentPrompt }),
       });
 
       const data = await response.json();
 
-      const assistantMessage: Message = {
-        role: "assistant",
-        content:
-          data.answer ||
-          data.summary ||
-          "Não consegui responder agora.",
-      };
-
-      setMessages((current) => [...current, assistantMessage]);
-    } catch (error) {
+      setMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          content:
+            data.answer ||
+            data.summary ||
+            "Não consegui responder agora.",
+        },
+      ]);
+    } catch {
       setMessages((current) => [
         ...current,
         {
@@ -64,7 +65,6 @@ export default function AssistentePage() {
       ]);
     }
 
-    setPrompt("");
     setLoading(false);
   }
 
@@ -76,83 +76,44 @@ export default function AssistentePage() {
         <h1>Eu te ajudo.</h1>
 
         <p className="lead">
-          Pergunte qualquer coisa sobre organização, rotina,
-          planejamento, compras, agenda, produtividade,
-          finanças e dia a dia da família.
+          Pergunte qualquer coisa sobre organização, rotina, planejamento,
+          compras, agenda, produtividade, finanças e dia a dia da família.
         </p>
       </section>
 
       <section className="panel-card">
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 14,
-            marginBottom: 20,
-          }}
-        >
+        <div className="summary-list">
           {messages.map((message, index) => (
-            <article
-              key={index}
-              style={{
-                alignSelf:
-                  message.role === "user"
-                    ? "flex-end"
-                    : "flex-start",
-                maxWidth: "85%",
-                background:
-                  message.role === "user"
-                    ? "rgba(37,99,235,0.15)"
-                    : "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                padding: "14px 16px",
-                borderRadius: 18,
-              }}
-            >
-              <strong
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  marginBottom: 6,
-                }}
-              >
-                {message.role === "assistant" ? (
-                  <>
-                    <Bot size={16} />
-                    Senhor Melo
-                  </>
-                ) : (
-                  "Você"
-                )}
-              </strong>
-
-              <p
-                style={{
-                  whiteSpace: "pre-wrap",
-                  lineHeight: 1.6,
-                }}
-              >
-                {message.content}
-              </p>
+            <article key={index}>
+              <Bot />
+              <div>
+                <strong>
+                  {message.role === "assistant" ? "Senhor Melo" : "Você"}
+                </strong>
+                <span style={{ whiteSpace: "pre-wrap" }}>
+                  {message.content}
+                </span>
+              </div>
             </article>
           ))}
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            gap: 10,
-          }}
-        >
+        <div style={{ marginTop: 20, display: "grid", gap: 12 }}>
           <textarea
-            placeholder="Ex: Como posso te ajudar hoje?..."
+            placeholder="Ex: organize minha rotina da semana..."
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
-            rows={3}
+            rows={5}
             style={{
-              flex: 1,
-              resize: "none",
+              width: "100%",
+              resize: "vertical",
+              borderRadius: 22,
+              padding: 18,
+              border: "1px solid rgba(15, 23, 42, 0.12)",
+              background: "#eef4ff",
+              fontSize: 16,
+              lineHeight: 1.5,
+              outline: "none",
             }}
           />
 
@@ -160,13 +121,17 @@ export default function AssistentePage() {
             className="primary-action"
             onClick={sendMessage}
             disabled={loading}
+            type="button"
           >
             {loading ? (
-              <Loader2 className="spin" size={18} />
+              <>
+                <Loader2 size={18} />
+                Pensando...
+              </>
             ) : (
               <>
                 <SendHorizonal size={18} />
-                Enviar
+                Eu te ajudo
               </>
             )}
           </button>
