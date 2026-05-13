@@ -1,29 +1,51 @@
-# Correção Senhor Melo v3.5 - Persistência
+# Senhor Melo v3.6 - Multi-família
 
-Esta correção NÃO altera CSS.
+Esta versão adiciona:
+- Login/cadastro da família
+- Sessão familiar local
+- Convites por link
+- Home dinâmica: "Bom dia, Família X"
+- Módulo de vacinas dos filhos
+- Módulo de lista de compras
+- Endpoint base para Alexa
+- AppShell com novas abas
 
-Substitua/crie estes arquivos:
-- lib/supabaseClient.ts
+## Arquivos criados/alterados
+
+Substituir/criar:
+- lib/familySession.ts
+- lib/familyStore.ts
 - lib/persistentStore.ts
+- app/login/page.tsx
+- app/convite/[code]/page.tsx
 - app/page.tsx
-- app/agenda/page.tsx
-- app/financeiro/page.tsx
-- supabase-persistence.sql
+- app/vacinas/page.tsx
+- app/compras/page.tsx
+- app/api/alexa/route.ts
+- components/AppShell.tsx
+- supabase-multifamilia.sql
+
+## Importante
+
+Este pacote NÃO altera `app/globals.css`.
 
 ## Supabase
 
-1. Abra Supabase
-2. Vá em SQL Editor
-3. Cole o conteúdo de `supabase-persistence.sql`
-4. Clique Run
+Rode o arquivo `supabase-multifamilia.sql` no SQL Editor do Supabase.
 
-## Vercel
+## Depois
 
-Confira as variáveis:
-- NEXT_PUBLIC_SUPABASE_URL
-- NEXT_PUBLIC_SUPABASE_ANON_KEY
+1. Suba os arquivos no GitHub
+2. Faça commit
+3. Faça deploy na Vercel
+4. Abra `/login`
+5. Crie a família principal
+6. Copie os links de convite para os familiares
 
-Depois faça novo deploy.
+## Alexa
 
-Se o Supabase não estiver configurado, o app salva em localStorage.
-Com Supabase configurado, salva no banco online.
+O endpoint base será:
+
+https://SEU-DOMINIO.com/api/alexa
+
+Para funcionar com Alexa real, ainda precisa criar uma Skill na Amazon Developer Console e apontar para esse endpoint.
