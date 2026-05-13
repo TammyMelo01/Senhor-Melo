@@ -1,51 +1,37 @@
-# Senhor Melo v3.6 - Multi-família
+# Senhor Melo v3.8 - Assistente com ações
 
-Esta versão adiciona:
-- Login/cadastro da família
-- Sessão familiar local
-- Convites por link
-- Home dinâmica: "Bom dia, Família X"
-- Módulo de vacinas dos filhos
-- Módulo de lista de compras
-- Endpoint base para Alexa
-- AppShell com novas abas
+Esta correção transforma o assistente em:
+- Chat consultivo
+- Criador de planos
+- Agente que grava ações no app
 
-## Arquivos criados/alterados
+## Arquivos para substituir/criar
 
-Substituir/criar:
-- lib/familySession.ts
-- lib/familyStore.ts
-- lib/persistentStore.ts
-- app/login/page.tsx
-- app/convite/[code]/page.tsx
-- app/page.tsx
-- app/vacinas/page.tsx
-- app/compras/page.tsx
-- app/api/alexa/route.ts
-- components/AppShell.tsx
-- supabase-multifamilia.sql
+- lib/assistantKnowledge.ts
+- lib/assistantActions.ts
+- app/api/assistant-action/route.ts
+- app/api/ai/route.ts
+- app/assistente/page.tsx
+
+## Exemplos para testar
+
+Perguntas gerais:
+- Tô tomando prednisolona e tô com desconforto na barriga. É normal?
+- Me ajuda a organizar minha semana.
+- Como controlar melhor os gastos da família?
+
+Planos:
+- Faça um plano de 15 dias para organizar a casa nas férias.
+- Crie um plano de 15 dias para organizar a casa e coloque na agenda.
+
+Ações:
+- Adicione consulta do filho amanhã às 15h na agenda.
+- Adicionar arroz, leite e café na lista de compras.
+- Adicionar despesa de R$ 120 no mercado.
+- Adicionar receita de R$ 5400 de salário.
+- Cadastre vacina BCG para meu filho amanhã.
 
 ## Importante
 
-Este pacote NÃO altera `app/globals.css`.
+Não altera o globals.css.
 
-## Supabase
-
-Rode o arquivo `supabase-multifamilia.sql` no SQL Editor do Supabase.
-
-## Depois
-
-1. Suba os arquivos no GitHub
-2. Faça commit
-3. Faça deploy na Vercel
-4. Abra `/login`
-5. Crie a família principal
-6. Copie os links de convite para os familiares
-
-## Alexa
-
-O endpoint base será:
-
-https://SEU-DOMINIO.com/api/alexa
-
-Para funcionar com Alexa real, ainda precisa criar uma Skill na Amazon Developer Console e apontar para esse endpoint.
