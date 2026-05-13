@@ -1,37 +1,32 @@
-# Senhor Melo v3.8 - Assistente com ações
+# Senhor Melo v3.9 - Markdown e contexto
 
-Esta correção transforma o assistente em:
-- Chat consultivo
-- Criador de planos
-- Agente que grava ações no app
+Este pacote corrige:
 
-## Arquivos para substituir/criar
+- Respostas com `\n` aparecendo na tela
+- Renderização básica de markdown
+- Contexto para entender "esse plano"
+- Ação: "coloque esse plano na minha agenda"
 
-- lib/assistantKnowledge.ts
-- lib/assistantActions.ts
-- app/api/assistant-action/route.ts
-- app/api/ai/route.ts
+## Arquivos para substituir
+
 - app/assistente/page.tsx
+- app/api/assistant-action/route.ts
+- lib/assistantActions.ts
 
-## Exemplos para testar
+## Não precisa instalar dependência
 
-Perguntas gerais:
-- Tô tomando prednisolona e tô com desconforto na barriga. É normal?
-- Me ajuda a organizar minha semana.
-- Como controlar melhor os gastos da família?
+O markdown básico foi feito dentro do próprio componente.
+Não precisa instalar `react-markdown`.
 
-Planos:
-- Faça um plano de 15 dias para organizar a casa nas férias.
-- Crie um plano de 15 dias para organizar a casa e coloque na agenda.
+## Testes
 
-Ações:
-- Adicione consulta do filho amanhã às 15h na agenda.
-- Adicionar arroz, leite e café na lista de compras.
-- Adicionar despesa de R$ 120 no mercado.
-- Adicionar receita de R$ 5400 de salário.
-- Cadastre vacina BCG para meu filho amanhã.
+1. Pergunte:
+   Faça um plano de atividades pra arrumar a casa durante 15 dias que vou estar de férias
 
-## Importante
+2. Depois pergunte:
+   Consegue colocar esse plano na minha agenda?
 
-Não altera o globals.css.
-
+Resultado esperado:
+- texto formatado
+- sem `\n`
+- criação dos 15 itens na agenda
