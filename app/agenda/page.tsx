@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { FamilyCalendar } from "@/components/FamilyCalendar";
-import { initialEvents, initialMembers } from "@/lib/mockData";
 import { CalendarItem } from "@/lib/types";
-import { loadEvents, saveEvent } from "@/lib/persistentStore";
+import { initialEvents, initialMembers } from "@/lib/mockData";
+import { deleteEventPersisted, loadEvents, saveEvent } from "@/lib/persistentStore";
 
 export default function AgendaPage() {
   const [events, setEvents] = useState<CalendarItem[]>(initialEvents);
@@ -18,17 +18,36 @@ export default function AgendaPage() {
     await saveEvent(item);
   }
 
+  async function updateEvent(updated: CalendarItem) {
+    setEvents((current) =>
+      current.map((item) => (item.id === updated.id ? updated : item))
+    );
+    await saveEvent(updated);
+  }
+
+  async function deleteEvent(id: string) {
+    setEvents((current) => current.filter((item) => item.id !== id));
+    await deleteEventPersisted(id);
+  }
+
   return (
     <>
       <section className="hero-section">
         <span className="badge">Agenda familiar e tarefas</span>
         <h1>Calendário visual completo.</h1>
         <p className="lead">
-          Use dia, 3 dias, semana, mês, ano ou agenda. Clique em qualquer horário para criar tarefa, evento, reunião, lembrete, meta ou bloqueio de tempo.
+          Crie, edite e exclua compromissos, tarefas, lembretes e eventos da família.
         </p>
       </section>
 
-      <FamilyCalendar members={initialMembers} items={events} onAddItem={addEvent} />
+      <FamilyCalendar
+        members={initialMembers}
+        items={events}
+        onAddItem={addEvent}
+        onUpdateItem={updateEvent}
+        onDeleteItem={deleteEvent}
+      />
     </>
   );
 }
+
