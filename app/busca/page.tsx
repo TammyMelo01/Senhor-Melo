@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Search } from "lucide-react";
 
 type SearchResult = {
@@ -13,7 +13,7 @@ type SearchResult = {
   href: string;
 };
 
-export default function BuscaPage() {
+function BuscaContent() {
   const params = useSearchParams();
   const q = params.get("q") || "";
   const familyId = params.get("familyId") || "";
@@ -24,14 +24,22 @@ export default function BuscaPage() {
     async function search() {
       setLoading(true);
 
-      const response = await fetch(`/api/search?q=${encodeURIComponent(q)}&familyId=${encodeURIComponent(familyId)}`);
+      const response = await fetch(
+        `/api/search?q=${encodeURIComponent(q)}&familyId=${encodeURIComponent(familyId)}`
+      );
+
       const data = await response.json();
 
       setResults(data.results || []);
       setLoading(false);
     }
 
-    if (q) search();
+    if (q) {
+      search();
+    } else {
+      setResults([]);
+      setLoading(false);
+    }
   }, [q, familyId]);
 
   return (
@@ -59,7 +67,9 @@ export default function BuscaPage() {
             <Link href={item.href} key={`${item.type}-${item.id}`}>
               <article>
                 <div>
-                  <strong>{item.type} • {item.title}</strong>
+                  <strong>
+                    {item.type} • {item.title}
+                  </strong>
                   <span>{item.description}</span>
                 </div>
               </article>
@@ -68,5 +78,13 @@ export default function BuscaPage() {
         </div>
       </section>
     </>
+  );
+}
+
+export default function BuscaPage() {
+  return (
+    <Suspense fallback={<p className="empty-list">Carregando busca...</p>}>
+      <BuscaContent />
+    </Suspense>
   );
 }
