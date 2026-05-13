@@ -8,7 +8,6 @@ type GroqMessage = {
 
 async function askGroq(prompt: string) {
   const apiKey = process.env.GROQ_API_KEY;
-
   if (!apiKey) return null;
 
   const messages: GroqMessage[] = [
@@ -26,7 +25,7 @@ async function askGroq(prompt: string) {
       model: "llama-3.1-8b-instant",
       messages,
       temperature: 0.5,
-      max_tokens: 700,
+      max_tokens: 900,
     }),
   });
 
@@ -71,3 +70,4 @@ export async function POST(request: Request) {
     );
   }
 }
+
