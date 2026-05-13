@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Bot, Loader2, SendHorizonal } from "lucide-react";
+import { getCurrentFamilyId } from "@/lib/familySession";
 
 type Message = {
   role: "user" | "assistant";
@@ -16,7 +17,7 @@ export default function AssistentePage() {
     {
       role: "assistant",
       content:
-        "Olá 👋 Eu sou o Senhor Melo. Posso ajudar sua família com organização, rotina, compras, agenda, planejamento e dúvidas do dia a dia.",
+        "Olá 👋 Eu sou o Senhor Melo. Posso responder dúvidas, montar planos e também adicionar itens na agenda, vacinas, finanças e lista de compras.",
     },
   ]);
 
@@ -34,12 +35,13 @@ export default function AssistentePage() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/ai", {
+      const response = await fetch("/api/assistant-action", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ prompt: currentPrompt }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: currentPrompt,
+          familyId: getCurrentFamilyId(),
+        }),
       });
 
       const data = await response.json();
@@ -48,10 +50,7 @@ export default function AssistentePage() {
         ...current,
         {
           role: "assistant",
-          content:
-            data.answer ||
-            data.summary ||
-            "Não consegui responder agora.",
+          content: data.answer || "Não consegui responder agora.",
         },
       ]);
     } catch {
@@ -59,8 +58,7 @@ export default function AssistentePage() {
         ...current,
         {
           role: "assistant",
-          content:
-            "Estou com dificuldade para responder agora. Tente novamente em instantes.",
+          content: "Estou com dificuldade para responder agora. Tente novamente em instantes.",
         },
       ]);
     }
@@ -72,12 +70,9 @@ export default function AssistentePage() {
     <>
       <section className="hero-section">
         <span className="badge">Assistente inteligente</span>
-
         <h1>Eu te ajudo.</h1>
-
         <p className="lead">
-          Pergunte qualquer coisa sobre organização, rotina, planejamento,
-          compras, agenda, produtividade, finanças e dia a dia da família.
+          Pergunte qualquer coisa ou peça para eu adicionar compromissos, vacinas, receitas, despesas e itens na lista de compras.
         </p>
       </section>
 
@@ -87,12 +82,8 @@ export default function AssistentePage() {
             <article key={index}>
               <Bot />
               <div>
-                <strong>
-                  {message.role === "assistant" ? "Senhor Melo" : "Você"}
-                </strong>
-                <span style={{ whiteSpace: "pre-wrap" }}>
-                  {message.content}
-                </span>
+                <strong>{message.role === "assistant" ? "Senhor Melo" : "Você"}</strong>
+                <span style={{ whiteSpace: "pre-wrap" }}>{message.content}</span>
               </div>
             </article>
           ))}
@@ -100,7 +91,7 @@ export default function AssistentePage() {
 
         <div style={{ marginTop: 20, display: "grid", gap: 12 }}>
           <textarea
-            placeholder="Ex: organize minha rotina da semana..."
+            placeholder="Ex: faça um plano de 15 dias para organizar a casa nas férias..."
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
             rows={5}
@@ -117,12 +108,7 @@ export default function AssistentePage() {
             }}
           />
 
-          <button
-            className="primary-action"
-            onClick={sendMessage}
-            disabled={loading}
-            type="button"
-          >
+          <button className="primary-action" onClick={sendMessage} disabled={loading} type="button">
             {loading ? (
               <>
                 <Loader2 size={18} />
@@ -140,3 +126,4 @@ export default function AssistentePage() {
     </>
   );
 }
+
