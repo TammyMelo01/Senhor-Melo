@@ -1,9 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Bot, CalendarDays, CreditCard, Home, Menu, Settings, ShoppingCart, Syringe, UserRound, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  Bell,
+  Bot,
+  CalendarDays,
+  CreditCard,
+  Home,
+  Menu,
+  Moon,
+  Search,
+  Settings,
+  ShoppingCart,
+  Syringe,
+  UserRound,
+  X,
+} from "lucide-react";
 import { useState } from "react";
+import { getCurrentFamilyId } from "@/lib/familySession";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -18,7 +33,21 @@ const navItems = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  function submitSearch(event: React.FormEvent) {
+    event.preventDefault();
+
+    const query = search.trim();
+    if (!query) return;
+
+    const familyId = getCurrentFamilyId();
+    router.push(`/busca?q=${encodeURIComponent(query)}&familyId=${encodeURIComponent(familyId)}`);
+    setSearch("");
+    setOpen(false);
+  }
 
   return (
     <div className={`app-frame ${open ? "sidebar-open" : ""}`}>
@@ -26,7 +55,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <aside className="sidebar">
         <button className="sidebar-close" onClick={() => setOpen(false)}>
-          <X size={20} /> Fechar
+          <X size={20} />
+          Fechar
         </button>
 
         <div className="brand">
@@ -43,7 +73,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             const active = pathname === item.href;
 
             return (
-              <Link key={item.href} href={item.href} className={`nav-item ${active ? "active" : ""}`} onClick={() => setOpen(false)}>
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`nav-item ${active ? "active" : ""}`}
+                onClick={() => setOpen(false)}
+              >
                 <Icon size={22} />
                 <span>{item.label}</span>
               </Link>
@@ -64,9 +99,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <section className="main-content">
         <header className="topbar">
-          <button className="icon-button mobile-menu" onClick={() => setOpen(true)}><Menu /></button>
-          <div className="top-search">Pesquisar eventos, contas, vacinas, compras...</div>
+          <button className="icon-button mobile-menu" onClick={() => setOpen(true)} aria-label="Abrir menu">
+            <Menu />
+          </button>
+
+          <form className="top-search" onSubmit={submitSearch} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Search size={18} />
+            <input
+              aria-label="Pesquisar"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Pesquisar eventos, contas, vacinas, compras..."
+              style={{
+                width: "100%",
+                border: 0,
+                outline: "none",
+                background: "transparent",
+                color: "inherit",
+                minWidth: 0,
+              }}
+            />
+          </form>
+
+          <button className="icon-button" aria-label="Notificações">
+            <Bell />
+          </button>
+
+          <button className="icon-button" aria-label="Tema">
+            <Moon />
+          </button>
         </header>
+
         {children}
       </section>
     </div>
