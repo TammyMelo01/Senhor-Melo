@@ -1,292 +1,185 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Bell, ChevronLeft, ChevronRight, Clock, Plus, Search } from "lucide-react";
-import { addMonths, calendarViews, monthLabel, todayISO } from "@/lib/calendar";
+import { CalendarDays, Pencil, Plus, Trash2 } from "lucide-react";
 import { CalendarItem, Member } from "@/lib/types";
-import { Modal } from "./Modal";
 
-const hours = Array.from({ length: 17 }, (_, index) => `${String(index + 6).padStart(2, "0")}:00`);
-
-function getEventPosition(start: string, end: string) {
-  const startHour = Number(start.slice(0, 2));
-  const startMinute = Number(start.slice(3, 5));
-  const endHour = Number(end.slice(0, 2));
-  const endMinute = Number(end.slice(3, 5));
-
-  const startTotal = (startHour - 6) * 60 + startMinute;
-  const endTotal = Math.max(startTotal + 45, (endHour - 6) * 60 + endMinute);
-
-  return {
-    top: 52 + startTotal,
-    height: Math.max(58, endTotal - startTotal),
-  };
-}
-
-export function FamilyCalendar({
-  members,
-  items,
-  onAddItem,
-}: {
+type Props = {
   members: Member[];
   items: CalendarItem[];
   onAddItem: (item: CalendarItem) => void;
-}) {
-  const [view, setView] = useState("Semana");
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({
-    title: "",
-    type: "evento",
-    date: todayISO(),
-    start: "08:00",
-    end: "09:00",
-    memberId: members[0]?.id || "",
-    priority: "Média",
-    color: "#2563eb",
-    whatsappReminder: true,
-    description: "",
-    location: "",
-    meetingLink: "",
-  });
+  onUpdateItem?: (item: CalendarItem) => void;
+  onDeleteItem?: (id: string) => void;
+};
 
-  const member = useMemo(
-    () => members.find((item) => item.id === form.memberId) || members[0],
-    [members, form.memberId]
-  );
+const emptyForm = {
+  title: "",
+  type: "evento",
+  date: new Date().toISOString().slice(0, 10),
+  start: "08:00",
+  end: "09:00",
+  memberName: "Família",
+  priority: "Média",
+  location: "",
+  description: "",
+  whatsappReminder: true,
+};
 
-  function openQuickCreate(hour: string) {
-    const nextHour = `${String(Math.min(Number(hour.slice(0, 2)) + 1, 23)).padStart(2, "0")}:00`;
+export function FamilyCalendar({ members, items, onAddItem, onUpdateItem, onDeleteItem }: Props) {
+  const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
-    setForm((current) => ({
-      ...current,
-      start: hour,
-      end: nextHour,
-    }));
+  const filteredItems = useMemo(() => {
+    const q = search.toLowerCase().trim();
 
-    setModalOpen(true);
+    return items
+      .filter((item) => {
+        if (!q) return true;
+
+        return [
+          item.title,
+          item.description,
+          item.memberName,
+          item.location,
+          item.type,
+          item.priority,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(q);
+      })
+      .sort((a, b) => `${a.date} ${a.start}`.localeCompare(`${b.date} ${b.start}`));
+  }, [items, search]);
+
+  function resetForm() {
+    setForm(emptyForm);
+    setEditingId(null);
   }
 
-  async function submitEvent(event: React.FormEvent) {
+  function submit(event: React.FormEvent) {
     event.preventDefault();
 
-    if (!form.title.trim()) return;
+    const selectedMember = members.find((member) => member.name === form.memberName);
 
-    const newItem: CalendarItem = {
-      id: crypto.randomUUID(),
+    const payload: CalendarItem = {
+      id: editingId || crypto.randomUUID(),
       title: form.title,
       type: form.type as CalendarItem["type"],
       date: form.date,
       start: form.start,
       end: form.end,
-      color: form.color,
-      memberId: form.memberId,
-      memberName: member?.name || "Família",
+      color: selectedMember?.color || "#2563eb",
+      memberId: selectedMember?.id || "",
+      memberName: form.memberName || "Família",
       priority: form.priority as CalendarItem["priority"],
       location: form.location,
-      meetingLink: form.meetingLink,
       description: form.description,
       whatsappReminder: form.whatsappReminder,
-      microsteps: form.description
-        ? form.description
-            .split(".")
-            .map((step) => step.trim())
-            .filter(Boolean)
-        : ["Confirmar detalhes", "Adicionar lembrete", "Executar no horário"],
+      microsteps: [],
     };
 
-    onAddItem(newItem);
-
-    if (newItem.whatsappReminder) {
-      const savedUsers = JSON.parse(localStorage.getItem("senhor-melo-users") || "[]");
-      const targetUser = savedUsers.find((user: any) => user.name === newItem.memberName);
-      const phone = targetUser?.phone || savedUsers[0]?.phone;
-
-      if (phone) {
-        fetch("/api/whatsapp", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            phone,
-            message: `🔔 Senhor Melo\n\nLembrete criado:\n${newItem.title}\n${newItem.date} das ${newItem.start} às ${newItem.end}\nResponsável: ${newItem.memberName}`,
-          }),
-        }).catch(() => {});
-      }
+    if (editingId && onUpdateItem) {
+      onUpdateItem(payload);
+    } else {
+      onAddItem(payload);
     }
 
-    setForm((current) => ({ ...current, title: "", description: "" }));
-    setModalOpen(false);
+    resetForm();
+  }
+
+  function startEdit(item: CalendarItem) {
+    setEditingId(item.id);
+    setForm({
+      title: item.title,
+      type: item.type || "evento",
+      date: item.date,
+      start: item.start,
+      end: item.end,
+      memberName: item.memberName || "Família",
+      priority: item.priority || "Média",
+      location: item.location || "",
+      description: item.description || "",
+      whatsappReminder: Boolean(item.whatsappReminder),
+    });
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function deleteItem(id: string) {
+    const ok = window.confirm("Deseja excluir este compromisso?");
+    if (!ok) return;
+
+    onDeleteItem?.(id);
+
+    if (editingId === id) resetForm();
   }
 
   return (
-    <section className="calendar-module">
-      <div className="calendar-monthbar">
-        <button onClick={() => setCurrentDate(addMonths(currentDate, -1))} aria-label="Mês anterior">
-          <ChevronLeft size={18} />
-        </button>
+    <section className="panel-card">
+      <div style={{ display: "grid", gap: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <h2 style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <CalendarDays size={22} />
+            Agenda da família
+          </h2>
 
-        <strong>{monthLabel(currentDate)}</strong>
-
-        <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} aria-label="Próximo mês">
-          <ChevronRight size={18} />
-        </button>
-      </div>
-
-      <div className="calendar-toolbar">
-        <div className="view-tabs">
-          {calendarViews.map((item) => (
-            <button key={item} className={view === item ? "active" : ""} onClick={() => setView(item)}>
-              {item}
+          {editingId && (
+            <button className="danger-action" type="button" onClick={resetForm}>
+              Cancelar edição
             </button>
-          ))}
+          )}
         </div>
 
-        <button className="primary-action small" onClick={() => setModalOpen(true)}>
-          <Plus size={18} />
-          Novo
-        </button>
-      </div>
-
-      <div className="calendar-search">
-        <Search size={18} />
-        <input placeholder="Pesquisar no calendário" />
-      </div>
-
-      <div className="calendar-layout">
-        <aside className="mini-calendar">
-          <strong>Calendários</strong>
-
-          {["Família", "Plantões", "Escola", "Financeiro", "Tarefas"].map((calendar) => (
-            <label key={calendar}>
-              <input type="checkbox" defaultChecked /> {calendar}
-            </label>
-          ))}
-
-          <strong>Mini calendário</strong>
-
-          <div className="month-grid">
-            {Array.from({ length: 31 }, (_, index) => (
-              <button key={index}>{index + 1}</button>
-            ))}
-          </div>
-        </aside>
-
-        <div className="mobile-agenda-list">
-          {items.map((item) => (
-            <article className="mobile-agenda-card" key={item.id} style={{ borderLeftColor: item.color }}>
-              <div>
-                <strong>{item.title}</strong>
-                <span>
-                  <Clock size={14} /> {item.start} - {item.end}
-                </span>
-              </div>
-
-              {item.whatsappReminder && (
-                <small>
-                  <Bell size={14} /> WhatsApp
-                </small>
-              )}
-            </article>
-          ))}
-        </div>
-
-        <div className="time-grid">
-          <div className="now-line" />
-
-          {hours.map((hour) => (
-            <button className="time-row" key={hour} onClick={() => openQuickCreate(hour)}>
-              <span>{hour}</span>
-              <div />
-            </button>
-          ))}
-
-          {items.map((item, index) => {
-            const position = getEventPosition(item.start, item.end);
-
-            return (
-              <article
-                className="calendar-event"
-                key={item.id}
-                draggable
-                style={{
-                  background: item.color,
-                  top: position.top,
-                  height: position.height,
-                  left: `calc(86px + ${(index % 2) * 42}%)`,
-                }}
-              >
-                <strong>{item.title}</strong>
-                <span>{item.start} - {item.end}</span>
-
-                {item.whatsappReminder && (
-                  <small>
-                    <Bell size={13} /> WhatsApp
-                  </small>
-                )}
-              </article>
-            );
-          })}
-        </div>
-      </div>
-
-      <button className="floating-add" onClick={() => setModalOpen(true)}>
-        +
-      </button>
-
-      <Modal title="Criar item na agenda" open={modalOpen} onClose={() => setModalOpen(false)}>
-        <form className="form-grid" onSubmit={submitEvent}>
+        <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
           <input
-            placeholder="Título"
+            placeholder="Título do compromisso"
             value={form.title}
             onChange={(event) => setForm({ ...form, title: event.target.value })}
+            required
           />
 
-          <select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })}>
-            <option value="evento">Evento</option>
-            <option value="tarefa">Tarefa</option>
-            <option value="reuniao">Reunião</option>
-            <option value="lembrete">Lembrete</option>
-            <option value="meta">Meta</option>
-            <option value="bloqueio">Bloqueio de tempo</option>
-          </select>
+          <div className="form-grid">
+            <select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })}>
+              <option value="evento">Evento</option>
+              <option value="tarefa">Tarefa</option>
+              <option value="reuniao">Reunião</option>
+              <option value="lembrete">Lembrete</option>
+            </select>
 
-          <input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} />
+            <input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} required />
 
-          <div className="two-cols">
-            <input type="time" value={form.start} onChange={(event) => setForm({ ...form, start: event.target.value })} />
-            <input type="time" value={form.end} onChange={(event) => setForm({ ...form, end: event.target.value })} />
+            <input type="time" value={form.start} onChange={(event) => setForm({ ...form, start: event.target.value })} required />
+
+            <input type="time" value={form.end} onChange={(event) => setForm({ ...form, end: event.target.value })} required />
           </div>
 
-          <select value={form.memberId} onChange={(event) => setForm({ ...form, memberId: event.target.value })}>
-            {members.map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.name}
-              </option>
-            ))}
-          </select>
+          <div className="form-grid">
+            <select value={form.memberName} onChange={(event) => setForm({ ...form, memberName: event.target.value })}>
+              <option>Família</option>
+              {members.map((member) => (
+                <option key={member.id}>{member.name}</option>
+              ))}
+            </select>
 
-          <select value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })}>
-            <option>Alta</option>
-            <option>Média</option>
-            <option>Baixa</option>
-          </select>
+            <select value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })}>
+              <option>Baixa</option>
+              <option>Média</option>
+              <option>Alta</option>
+            </select>
+          </div>
 
           <input
-            placeholder="Localização"
+            placeholder="Local opcional"
             value={form.location}
             onChange={(event) => setForm({ ...form, location: event.target.value })}
           />
 
-          <input
-            placeholder="Link de reunião"
-            value={form.meetingLink}
-            onChange={(event) => setForm({ ...form, meetingLink: event.target.value })}
-          />
-
           <textarea
-            placeholder="Descrição ou microetapas"
+            placeholder="Descrição opcional"
             value={form.description}
             onChange={(event) => setForm({ ...form, description: event.target.value })}
+            rows={3}
           />
 
           <label className="switch-row">
@@ -295,14 +188,50 @@ export function FamilyCalendar({
               checked={form.whatsappReminder}
               onChange={(event) => setForm({ ...form, whatsappReminder: event.target.checked })}
             />
-            Receber lembrete no WhatsApp
+            Lembrar no WhatsApp
           </label>
 
           <button className="primary-action" type="submit">
-            Adicionar à agenda
+            <Plus size={18} />
+            {editingId ? "Salvar alterações" : "Adicionar compromisso"}
           </button>
         </form>
-      </Modal>
+
+        <input
+          placeholder="Buscar na agenda"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+
+        <div className="summary-list">
+          {filteredItems.length === 0 && <p className="empty-list">Nenhum compromisso encontrado.</p>}
+
+          {filteredItems.map((item) => (
+            <article key={item.id}>
+              <CalendarDays />
+              <div>
+                <strong>{item.title}</strong>
+                <span>
+                  {item.date} • {item.start} - {item.end} • {item.memberName || "Família"}
+                </span>
+                {item.description && <small>{item.description}</small>}
+
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+                  <button className="primary-action small" type="button" onClick={() => startEdit(item)}>
+                    <Pencil size={15} />
+                    Editar
+                  </button>
+
+                  <button className="danger-action" type="button" onClick={() => deleteItem(item.id)}>
+                    <Trash2 size={15} />
+                    Excluir
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }
