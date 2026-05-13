@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarDays, CreditCard, TrendingDown, TrendingUp } from "lucide-react";
+import { CalendarDays, CreditCard, Syringe, ShoppingCart, TrendingDown, TrendingUp } from "lucide-react";
+import Link from "next/link";
 import { DashboardCard } from "@/components/DashboardCard";
 import { DashboardSummaryModal } from "@/components/DashboardSummaryModal";
 import { FinanceModule } from "@/components/FinanceModule";
@@ -9,13 +10,22 @@ import { CalendarItem, Transaction } from "@/lib/types";
 import { formatCurrency, getFinanceSummary } from "@/lib/finance";
 import { initialCards, initialEvents, initialMembers, initialTransactions } from "@/lib/mockData";
 import { deleteTransactionPersisted, loadEvents, loadTransactions, saveTransaction } from "@/lib/persistentStore";
+import { getCurrentFamilyName, getFamilySession } from "@/lib/familySession";
 
 export default function Home() {
   const [events, setEvents] = useState<CalendarItem[]>(initialEvents);
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
+  const [familyName, setFamilyName] = useState("Família Melo");
   const [summaryType, setSummaryType] = useState<"events" | "income" | "expenses" | "bills" | null>(null);
 
   useEffect(() => {
+    const session = getFamilySession();
+    if (!session) {
+      window.location.href = "/login";
+      return;
+    }
+
+    setFamilyName(getCurrentFamilyName());
     loadEvents(initialEvents).then(setEvents);
     loadTransactions(initialTransactions).then(setTransactions);
   }, []);
@@ -28,9 +38,7 @@ export default function Home() {
   }
 
   async function updateTransaction(updated: Transaction) {
-    setTransactions((current) =>
-      current.map((transaction) => (transaction.id === updated.id ? updated : transaction))
-    );
+    setTransactions((current) => current.map((transaction) => (transaction.id === updated.id ? updated : transaction)));
     await saveTransaction(updated);
   }
 
@@ -43,13 +51,14 @@ export default function Home() {
     <>
       <section className="hero-section">
         <span className="badge">Família • Agenda • Finanças • IA</span>
-        <h1>Bom dia, família Melo.</h1>
-        <p className="lead">
-          Resumo inteligente do dia, compromissos, tarefas e contas com lembretes pelo WhatsApp.
-        </p>
-        <button className="primary-action" onClick={() => setSummaryType("events")}>
-          Organizar minha família com IA
-        </button>
+        <h1>Bom dia, {familyName}.</h1>
+        <p className="lead">Resumo inteligente do dia, compromissos, tarefas, vacinas, compras e contas com lembretes pelo WhatsApp.</p>
+
+        <div className="quick-grid">
+          <Link className="primary-action" href="/agenda"><CalendarDays size={18} /> Agenda</Link>
+          <Link className="primary-action" href="/vacinas"><Syringe size={18} /> Vacinas</Link>
+          <Link className="primary-action" href="/compras"><ShoppingCart size={18} /> Lista de compras</Link>
+        </div>
       </section>
 
       <section className="metrics-grid">
