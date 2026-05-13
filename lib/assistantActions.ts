@@ -13,10 +13,6 @@ export type AssistantActionResult = {
   shouldCreate?: boolean;
 };
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function tomorrowISO() {
   const date = new Date();
   date.setDate(date.getDate() + 1);
@@ -34,8 +30,8 @@ function extractMoney(text: string) {
 }
 
 function extractTime(text: string) {
-  const match = text.match(/(?:às|as|para|de)\s*(\d{1,2})(?::|h)?(\d{2})?/i);
-  if (!match) return "08:00";
+  const match = text.match(/(?:às|as|para|de|horário|horario|começando|comecando|comece|iniciar|inicie)\s*(\d{1,2})(?::|h)?(\d{2})?/i);
+  if (!match) return "";
 
   const hour = String(Math.min(Number(match[1]), 23)).padStart(2, "0");
   const minute = String(match[2] ? Number(match[2]) : 0).padStart(2, "0");
@@ -47,7 +43,10 @@ function extractDate(text: string) {
   const lower = text.toLowerCase();
 
   if (lower.includes("amanhã") || lower.includes("amanha")) return tomorrowISO();
-  if (lower.includes("hoje")) return todayISO();
+
+  if (lower.includes("hoje")) {
+    return new Date().toISOString().slice(0, 10);
+  }
 
   const dateMatch = lower.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
 
@@ -63,7 +62,7 @@ function extractDate(text: string) {
     return `${year}-${month}-${day}`;
   }
 
-  return todayISO();
+  return "";
 }
 
 function cleanTitle(text: string) {
@@ -201,6 +200,7 @@ export function detectAssistantAction(prompt: string): AssistantActionResult {
   if ((text.includes("agenda") || text.includes("compromisso") || text.includes("consulta") || text.includes("reunião") || text.includes("reuniao") || text.includes("tarefa")) && wantsCreate) {
     const title = cleanTitle(prompt) || "Compromisso";
     const start = extractTime(prompt);
+    const date = extractDate(prompt);
 
     return {
       type: "calendar_event",
@@ -208,7 +208,7 @@ export function detectAssistantAction(prompt: string): AssistantActionResult {
       data: {
         title,
         type: text.includes("tarefa") ? "tarefa" : "evento",
-        date: extractDate(prompt),
+        date,
         start,
         end: start,
         color: "#2563eb",
